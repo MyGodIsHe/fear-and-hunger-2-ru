@@ -30,6 +30,8 @@ jobs:
         run: pip3 install -r requirements.txt
 
       - name: Create archive
+        env:
+          GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
         run: |
           ./update_from_doc.py > translate_cache.json
           ./translate.py --game-dir src_game --line-limit 60 --skip-backup

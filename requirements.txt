@@ -1,0 +1,4 @@
+translatepy==2.3
+google-api-python-client==2.77.0
+google-auth==2.16.0
+google-auth-httplib2==0.1.0
