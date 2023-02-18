@@ -255,7 +255,8 @@ class GameTranslator:
     def save_translate_cache(self):
         print('save translate cache to', TRANSLATE_CACHE_FILENAME)
         with open(TRANSLATE_CACHE_FILENAME, 'w') as f:
-            json.dump(self.translate_map, f, ensure_ascii=False, indent=2)
+            json.dump(self.translate_map, f,
+                      ensure_ascii=False, indent=2, sort_keys=True)
 
     def clean_bad_cache(self):
         for key in set(self.translate_map) - set(self.translate_map_counter):

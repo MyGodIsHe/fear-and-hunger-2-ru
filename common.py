@@ -113,6 +113,8 @@ def fix_name(text: str) -> str:
         code = 80  # P
     elif code == 81:
         code = 83  # S
+    elif code == 80:
+        code = 82  # R
     else:
         code += 1
     full_name = chr(code) + m.group(2)
