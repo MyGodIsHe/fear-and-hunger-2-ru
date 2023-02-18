@@ -138,11 +138,6 @@ class GameTranslator:
                             self.mark_translate(item)
                             for item in obj['terms']['basic']
                         ]
-                    if 'commands' in obj['terms']:
-                        obj['terms']['commands'] = [
-                            self.mark_translate(item)
-                            for item in obj['terms']['commands']
-                        ]
 
         if 'displayName' in obj:
             obj['displayName'] = self.translate(obj['displayName'])
