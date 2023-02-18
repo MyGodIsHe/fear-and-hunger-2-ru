@@ -119,6 +119,30 @@ class GameTranslator:
                             3,
                         ),
                     )
+            case 'System.json':
+                if 'gameTitle' in obj:
+                    obj['gameTitle'] = self.mark_translate(obj['gameTitle'])
+                if 'terms' in obj:
+                    if 'params' in obj['terms']:
+                        obj['terms']['params'] = [
+                            self.mark_translate(item)
+                            for item in obj['terms']['params']
+                        ]
+                    if 'messages' in obj['terms']:
+                        obj['terms']['messages'] = {
+                            k: self.mark_translate(v)
+                            for k, v in obj['terms']['messages'].items()
+                        }
+                    if 'basic' in obj['terms']:
+                        obj['terms']['basic'] = [
+                            self.mark_translate(item)
+                            for item in obj['terms']['basic']
+                        ]
+                    if 'commands' in obj['terms']:
+                        obj['terms']['commands'] = [
+                            self.mark_translate(item)
+                            for item in obj['terms']['commands']
+                        ]
 
         if 'displayName' in obj:
             obj['displayName'] = self.translate(obj['displayName'])
@@ -144,7 +168,7 @@ class GameTranslator:
                 )
 
     def translate(self, text: str) -> str:
-        if not text:
+        if not text or not isinstance(text, str):
             return text
 
         orig_text = text
@@ -166,6 +190,17 @@ class GameTranslator:
         if orig_text != translated:
             logging.info('%s > %s', orig_text, translated)
         return translated
+
+    def mark_translate(self, text) -> str:
+        if not text or not isinstance(text, str):
+            return text
+
+        self.translate_map_counter[text] += 1
+
+        if text in self.translate_map:
+            return self.translate_map[text]
+        self.translate_map[text] = text
+        return text
 
     def call_translator(self, text: str) -> str:
         return self.translator.translate(
