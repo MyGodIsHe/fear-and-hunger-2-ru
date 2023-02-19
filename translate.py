@@ -121,9 +121,26 @@ class GameTranslator:
                             3,
                         ),
                     )
+            case 'Classes.json':
+                if 'name' in obj:
+                    obj['name'] = self.translate(obj['name'])
+                if 'description' in obj:
+                    obj['description'] = '\n'.join(
+                        split_text(
+                            self.translate(obj['description']),
+                            self.line_limit,
+                            3,
+                        ),
+                    )
+                if 'note' in obj:
+                    obj['note'] = self.mark_translate(obj['note'])
             case 'System.json':
                 if 'gameTitle' in obj:
                     obj['gameTitle'] = self.mark_translate(obj['gameTitle'])
+                if 'equipTypes' in obj:
+                    obj['equipTypes'] = [self.mark_translate(item) for item in obj['equipTypes']]
+                if 'skillTypes' in obj:
+                    obj['skillTypes'] = [self.mark_translate(item) for item in obj['skillTypes']]
                 if 'terms' in obj:
                     if 'params' in obj['terms']:
                         obj['terms']['params'] = [
