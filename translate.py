@@ -157,6 +157,11 @@ class GameTranslator:
                             self.mark_translate(item)
                             for item in obj['terms']['basic']
                         ]
+                    if 'commands' in obj['terms']:
+                        obj['terms']['commands'] = [
+                            self.mark_translate(item)
+                            for item in obj['terms']['commands']
+                        ]
 
         if 'displayName' in obj:
             obj['displayName'] = self.translate(obj['displayName'])
@@ -182,7 +187,7 @@ class GameTranslator:
                 )
 
     def translate(self, text: str) -> str:
-        if not text.strip() or not isinstance(text, str):
+        if not isinstance(text, str) or not text.strip():
             return text
 
         orig_text = text
@@ -206,7 +211,7 @@ class GameTranslator:
         return translated
 
     def mark_translate(self, text) -> str:
-        if not text.strip() or not isinstance(text, str):
+        if not isinstance(text, str) or not text.strip():
             return text
 
         self.translate_map_counter[text] += 1
