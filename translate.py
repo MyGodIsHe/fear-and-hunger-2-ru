@@ -15,6 +15,7 @@ from os.path import join
 from translatepy.translators.yandex import YandexTranslate
 
 from common import (
+    combine_desc_and_note,
     iterate_over_dict,
     collapse,
     split_text,
@@ -112,6 +113,7 @@ class GameTranslator:
                 if 'name' in obj:
                     obj['name'] = self.translate(obj['name'])
                 if 'description' in obj:
+                    combine_desc_and_note(obj)
                     obj['description'] = '\n'.join(
                         split_text(
                             self.translate(obj['description']),
@@ -163,7 +165,7 @@ class GameTranslator:
                 )
 
     def translate(self, text: str) -> str:
-        if not text or not isinstance(text, str):
+        if not text.strip() or not isinstance(text, str):
             return text
 
         orig_text = text
@@ -187,7 +189,7 @@ class GameTranslator:
         return translated
 
     def mark_translate(self, text) -> str:
-        if not text or not isinstance(text, str):
+        if not text.strip() or not isinstance(text, str):
             return text
 
         self.translate_map_counter[text] += 1
@@ -255,8 +257,7 @@ class GameTranslator:
     def save_translate_cache(self):
         print('save translate cache to', TRANSLATE_CACHE_FILENAME)
         with open(TRANSLATE_CACHE_FILENAME, 'w') as f:
-            json.dump(self.translate_map, f,
-                      ensure_ascii=False, indent=2, sort_keys=True)
+            json.dump(self.translate_map, f, ensure_ascii=False, indent=2)
 
     def clean_bad_cache(self):
         for key in set(self.translate_map) - set(self.translate_map_counter):

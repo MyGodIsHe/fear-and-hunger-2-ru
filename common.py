@@ -154,3 +154,14 @@ def replace_escapes(f):
 def replace_last(source_string, replace_what, replace_with):
     head, _sep, tail = source_string.rpartition(replace_what)
     return head + replace_with + tail
+
+
+def combine_desc_and_note(obj: dict):
+    note = obj.get('note')
+    if note:
+        i = note.find('\n\n')
+        if i != -1:
+            obj['description'] = (
+                    obj['description'].rstrip() + ' ' + note[:i].lstrip()
+            )
+            obj['note'] = note[i:]
