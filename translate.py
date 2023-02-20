@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-"""
-pip install translatepy
-"""
 import argparse
 import json
 import logging
@@ -25,13 +22,14 @@ from common import (
     ASCII_REGEX,
     replace_escapes,
 )
+from settings import TRANSLATE_CACHE_FILENAME
+
 
 logging.basicConfig(
     filename='log.txt',
     format='%(message)s',
-    level=logging.INFO,
+    level=logging.ERROR,
 )
-TRANSLATE_CACHE_FILENAME = 'translate_cache.json'
 
 
 class GameTranslator:
@@ -112,7 +110,7 @@ class GameTranslator:
             ):
                 if 'name' in obj:
                     obj['name'] = self.translate(obj['name'])
-                if 'description' in obj:
+                if 'description' in obj and obj['description'].strip():
                     combine_desc_and_note(obj)
                     obj['description'] = '\n'.join(
                         split_text(
@@ -282,8 +280,14 @@ class GameTranslator:
             json.dump(self.translate_map, f, ensure_ascii=False, indent=2)
 
     def clean_bad_cache(self):
+        was_deleted = {}
         for key in set(self.translate_map) - set(self.translate_map_counter):
+            was_deleted[key] = self.translate_map[key]
             del self.translate_map[key]
+        if was_deleted:
+            print('bad cache:')
+            for k, v in was_deleted.items():
+                print(k, '>', v)
 
     def print_bad_format(self):
         if not self.bad_formatting:

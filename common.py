@@ -1,5 +1,14 @@
 import re
 from typing import Iterator
+import io
+import json
+import os
+
+from googleapiclient.discovery import build
+from google.oauth2 import service_account
+from googleapiclient.http import MediaInMemoryUpload, MediaIoBaseDownload
+from settings import *
+
 
 FMT_REGEX = re.compile(r'\s*(\\.(?:\[[^\]]+\])?)\s*')
 REPLACE_REGEX = re.compile(r'\s*\\\s*k\s*\[\s*\d+\s*\]\s*')
@@ -165,3 +174,47 @@ def combine_desc_and_note(obj: dict):
                     obj['description'].rstrip() + ' ' + note[:i].lstrip()
             )
             obj['note'] = note[i:]
+
+def get_authenticated_service():
+    google_service_account = os.environ.get('GOOGLE_SERVICE_ACCOUNT')
+    if google_service_account:
+        credentials = service_account.Credentials.from_service_account_info(
+            json.loads(google_service_account), scopes=SCOPES)
+    else:
+        credentials = service_account.Credentials.from_service_account_file(
+            SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+    return build(API_SERVICE_NAME, API_VERSION, credentials=credentials)
+
+
+def get_parts(service):
+    for file_id in DOC_IDS:
+        for pair in get_file(service, file_id).split('\r\n\r\n\r\n'):
+            pair = pair.replace('\uFEFF', '')
+            yield pair.strip('\r\n').split('\r\n')
+
+
+def get_file(service, file_id: str) -> str:
+    request = service.files().export_media(
+        fileId=file_id, mimeType='text/plain')
+    file = io.BytesIO()
+    downloader = MediaIoBaseDownload(file, request)
+    done = False
+    while done is False:
+        status, done = downloader.next_chunk()
+    return file.getvalue().decode('utf-8')
+
+
+def get_revisions(service, file_id: str):
+    request = service.revisions().list(fileId=file_id)
+    print(request.execute())
+
+
+def upload_file(service, file_id: str, body: str):
+    m = MediaInMemoryUpload(body.encode('utf-8'), 'text/plain')
+    service.files().update(
+        fileId=file_id,
+        media_body=m,
+        media_mime_type='text/plain',
+    ).execute()
+
+
