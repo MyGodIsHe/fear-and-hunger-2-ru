@@ -46,6 +46,7 @@ class GameTranslator:
 
     def run(self):
         filenames = self.fetch_dir()
+        filenames = self.sort_files(filenames)
         for n, filename in enumerate(filenames, start=1):
             print(f'{n}/{len(filenames)} {filename} .. ')
             self.process_single_file(filename)
@@ -56,6 +57,24 @@ class GameTranslator:
             for filename in os.listdir(self.from_path)
             if os.path.splitext(filename)[1].lower() == '.json'
         ]
+
+    @staticmethod
+    def sort_files(filenames: list[str]) -> list[str]:
+        up = []
+        middle = []
+        down = []
+        for fn in filenames:
+            if fn.startswith('Map'):
+                down.append(fn)
+            elif fn.startswith('CommonEvents'):
+                middle.append(fn)
+            else:
+                up.append(fn)
+
+        up.sort()
+        middle.sort()
+        down.sort()
+        return up + middle + down
 
     def process_single_file(self, filename: str):
         from_path = os.path.join(self.from_path, filename)
@@ -274,6 +293,12 @@ class GameTranslator:
             with open(TRANSLATE_CACHE_FILENAME, 'r') as f:
                 self.translate_map = json.load(f)
 
+    def resort_translate_cache(self):
+        new_map = {}
+        for k in self.translate_map_counter.keys():
+            new_map[k] = self.translate_map[k]
+        self.translate_map = new_map
+
     def save_translate_cache(self):
         print('save translate cache to', TRANSLATE_CACHE_FILENAME)
         with open(TRANSLATE_CACHE_FILENAME, 'w') as f:
@@ -330,6 +355,10 @@ if __name__ == '__main__':
         '--skip-backup',
         action='store_false',
     )
+    parser.add_argument(
+        '--resort-cache',
+        action='store_true',
+    )
     args = parser.parse_args()
     try:
         logging.info('start')
@@ -355,6 +384,8 @@ if __name__ == '__main__':
             pass
         else:
             app.clean_bad_cache()
+        if args.resort_cache:
+            app.resort_translate_cache()
         app.save_translate_cache()
         app.print_bad_format()
         app.print_bad_translate()
