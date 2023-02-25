@@ -284,7 +284,8 @@ class GameTranslator:
             self.bad_translate[text] = orig_translated
 
     def copy_to_game_dir(self, from_path):
-        shutil.copytree(from_path, self.game_dir, dirs_exist_ok=True)
+        if from_path != self.game_dir:
+            shutil.copytree(from_path, self.game_dir, dirs_exist_ok=True)
 
     def load_translate_cache(self):
         if os.path.exists(TRANSLATE_CACHE_FILENAME):
