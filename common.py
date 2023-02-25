@@ -14,6 +14,7 @@ FMT_REGEX = re.compile(r'\s*(\\.(?:\[[^\]]+\])?)\s*')
 REPLACE_REGEX = re.compile(r'\s*\\\s*k\s*\[\s*\d+\s*\]\s*')
 NAME_REGEX = re.compile(r'\\>\\i\[(\d+)\]\\\}([^\\]+)\\\{\\<')
 ASCII_REGEX = re.compile(r'[A-Za-z]')
+MENU_CATEGORY_REGEX = re.compile(r'<Menu Category:([^>]+)>')
 
 
 def iterate_over_dict(data: dict | list) -> Iterator[dict]:
@@ -104,11 +105,14 @@ def split_text_by_char(text: str, limit: int) -> list[str]:
 
 def except_gab_text(f):
     def wrap(text: str) -> str:
-        has = text.startswith('GabText ')
-        if not has:
-            return text
-        text = text[8:]
-        return 'GabText ' + f(text)
+        if text.startswith('GabText '):
+            return text[:8] + f(text[8:])
+        if text.startswith('choice_text '):
+            i = text.find(' ', 12)
+            if i != -1:
+                i += 1
+            return text[:i] + f(text[i:])
+        return text
 
     return wrap
 
@@ -167,13 +171,36 @@ def replace_last(source_string, replace_what, replace_with):
 
 def combine_desc_and_note(obj: dict):
     note = obj.get('note')
-    if note:
-        i = note.find('\n\n')
-        if i != -1:
-            obj['description'] = (
-                    obj['description'].rstrip() + ' ' + note[:i].lstrip()
-            )
-            obj['note'] = note[i:]
+    if not note:
+        return
+    i = note.find('\n\n')
+    if i != -1:
+        obj['description'] = (
+                obj['description'].rstrip() + ' ' + note[:i].lstrip()
+        )
+        obj['note'] = note[i:]
+
+
+def translate_category(obj: dict):
+    note = obj.get('note')
+    if not note:
+        return
+    m = MENU_CATEGORY_REGEX.search(note)
+    if not m:
+        return
+    value = m.group(1).strip()
+    match value:
+        case 'Items':
+            value = 'Предметы'
+        case 'Healing':
+            value = 'Исцеление'
+        case 'Food':
+            value = 'Еда'
+        case 'Body bag':
+            value = 'Мешок для останков'
+    start, end = m.span(1)
+    obj['note'] = note[:start] + ' ' + value + note[end:]
+
 
 def get_authenticated_service():
     google_service_account = os.environ.get('GOOGLE_SERVICE_ACCOUNT')

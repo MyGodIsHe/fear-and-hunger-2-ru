@@ -21,6 +21,7 @@ from common import (
     FMT_REGEX,
     ASCII_REGEX,
     replace_escapes,
+    translate_category,
 )
 from settings import TRANSLATE_CACHE_FILENAME
 
@@ -34,9 +35,9 @@ logging.basicConfig(
 
 class GameTranslator:
 
-    def __init__(self, from_path: str, to_path: str, line_limit: int):
-        self.from_path = from_path
-        self.to_path = to_path
+    def __init__(self, game_dir: str, line_limit: int):
+        self.game_dir = game_dir
+        self.to_path = join(game_dir, 'www/data')
         self.translate_map = {}
         self.translate_map_counter = defaultdict(int)
         self.translator = YandexTranslate()
@@ -54,7 +55,7 @@ class GameTranslator:
     def fetch_dir(self) -> list[str]:
         return [
             filename
-            for filename in os.listdir(self.from_path)
+            for filename in os.listdir(self.to_path)
             if os.path.splitext(filename)[1].lower() == '.json'
         ]
 
@@ -77,7 +78,7 @@ class GameTranslator:
         return up + middle + down
 
     def process_single_file(self, filename: str):
-        from_path = os.path.join(self.from_path, filename)
+        from_path = os.path.join(self.to_path, filename)
         data = json.loads(open(from_path).read())
         with ThreadPool(10) as pool:
             pool.map(
@@ -138,6 +139,7 @@ class GameTranslator:
                             3,
                         ),
                     )
+                translate_category(obj)
             case 'Classes.json':
                 if 'name' in obj:
                     obj['name'] = self.translate(obj['name'])
@@ -281,11 +283,8 @@ class GameTranslator:
         if m:
             self.bad_translate[text] = orig_translated
 
-    def create_backup(self):
-        if not os.path.exists(self.from_path):
-            print('creating backup .. ', end='')
-            shutil.copytree(self.to_path, self.from_path)
-            print('done')
+    def copy_to_game_dir(self, from_path):
+        shutil.copytree(from_path, self.game_dir, dirs_exist_ok=True)
 
     def load_translate_cache(self):
         if os.path.exists(TRANSLATE_CACHE_FILENAME):
@@ -352,28 +351,17 @@ if __name__ == '__main__':
         required=True,
     )
     parser.add_argument(
-        '--skip-backup',
-        action='store_false',
-    )
-    parser.add_argument(
         '--resort-cache',
         action='store_true',
     )
     args = parser.parse_args()
     try:
         logging.info('start')
-        to_path = join(args.game_dir, 'www/data')
-        if args.skip_backup:
-            from_path = join(args.game_dir, 'www/data-backup')
-        else:
-            from_path = to_path
         app = GameTranslator(
-            from_path,
-            to_path,
+            args.game_dir,
             args.line_limit,
         )
-        if not args.skip_backup:
-            app.create_backup()
+        app.copy_to_game_dir('src_game')
         app.load_translate_cache()
     except KeyboardInterrupt:
         pass

@@ -35,7 +35,7 @@ jobs:
           GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
         run: |
           ./update_from_doc.py > translate_cache.json
-          ./translate.py --game-dir src_game --line-limit 60 --skip-backup
+          ./translate.py --game-dir src_game --line-limit 60
           cd src_game && zip -r ../fear-and-hunger-2-ru.zip .
           
 
