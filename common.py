@@ -197,7 +197,7 @@ def translate_category(obj: dict):
         case 'Food':
             value = 'Еда'
         case 'Body bag':
-            value = 'Мешок для останков'
+            value = 'Мешок для трупов'
     start, end = m.span(1)
     obj['note'] = note[:start] + ' ' + value + note[end:]
 
