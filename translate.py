@@ -12,10 +12,10 @@ from os.path import join
 from translatepy.translators.yandex import YandexTranslate
 
 from common import (
+    Font,
     combine_desc_and_note,
     iterate_over_dict,
     collapse,
-    split_text,
     except_gab_text,
     fix_name,
     FMT_REGEX,
@@ -44,6 +44,8 @@ class GameTranslator:
         self.line_limit = line_limit
         self.bad_formatting = {}
         self.bad_translate = {}
+        self.font = Font(join(game_dir, 'www/fonts/CrimsonText-Regular.ttf'))
+        self.overspaces = {}
 
     def run(self):
         filenames = self.fetch_dir()
@@ -100,7 +102,7 @@ class GameTranslator:
                     item['parameters'] and
                     item['parameters'][0]
             ):
-                parts = split_text(
+                parts = self.font.split_text(
                     item['parameters'][0],
                     self.line_limit,
                     4,
@@ -132,24 +134,18 @@ class GameTranslator:
                     obj['name'] = self.translate(obj['name'])
                 if 'description' in obj and obj['description'].strip():
                     combine_desc_and_note(obj)
-                    obj['description'] = '\n'.join(
-                        split_text(
-                            self.translate(obj['description']),
-                            self.line_limit,
-                            3,
-                        ),
+                    obj['description'] = self.split_and_translate_text(
+                        obj['description'],
+                        3,
                     )
                 translate_category(obj)
             case 'Classes.json':
                 if 'name' in obj:
                     obj['name'] = self.translate(obj['name'])
                 if 'description' in obj:
-                    obj['description'] = '\n'.join(
-                        split_text(
-                            self.translate(obj['description']),
-                            self.line_limit,
-                            3,
-                        ),
+                    obj['description'] = self.split_and_translate_text(
+                        obj['description'],
+                        3,
                     )
                 if 'note' in obj:
                     obj['note'] = self.mark_translate(obj['note'])
@@ -192,17 +188,19 @@ class GameTranslator:
                     for parameter in obj['parameters'][0]
                 ]
             case 356:
-                obj['parameters'][0] = except_gab_text(self.translate)(
-                    obj['parameters'][0]
+                obj['parameters'][0] = except_gab_text(self.split_and_translate_text)(
+                    obj['parameters'][0],
+                    1,
                 )
             case 401:
+                assert len(obj['parameters']) == 1
                 obj['parameters'] = [
-                    self.translate(parameter)
-                    for parameter in obj['parameters']
+                    self.split_and_translate_text(obj['parameters'][0], 4)
                 ]
             case 324 | 402:
-                obj['parameters'][1] = self.translate(
-                    obj['parameters'][1]
+                obj['parameters'][1] = self.split_and_translate_text(
+                    obj['parameters'][1],
+                    1,
                 )
 
     def translate(self, text: str) -> str:
@@ -219,7 +217,6 @@ class GameTranslator:
             text = fix_name(text)
             translated = replace_escapes(self.call_translator)(text)
 
-        translated = self.hard_translate(translated)
         self.translate_map[orig_text] = translated
 
         self.check_bad_translate(orig_text, translated)
@@ -247,26 +244,17 @@ class GameTranslator:
             destination_language='ru',
         ).result
 
-    @staticmethod
-    def hard_translate(text: str) -> str:
-        for world in [
-            'All-mer',
-            'All-Mer',
-            'Alll-mer',
-            'Alll-Mer',
-            'Аллл-мер',
-            'Аллл-Мер',
-            'Алль-мер',
-            'Алль-Мер',
-            'Аллль-мер',
-            'Аллль-Мер',
-        ]:
-            text = text.replace(world, 'Алл-мер')
-        for world in ['Prehevil', 'prehevil']:
-            text = text.replace(world, 'Прехвил')
-        text = text.replace('POCKETCAT', 'Карманный Кот')
-        text = text.replace('Pav', 'Пав')
-        return text
+    def split_and_translate_text(
+            self,
+            text: str,
+            count_lines: int,
+    ) -> str:
+        translated = self.translate(text)
+        parts = self.font.split_text(translated, self.line_limit, count_lines)
+        result = '\n'.join(parts)
+        if len(parts) > count_lines:
+            self.overspaces[text] = result
+        return result
 
     def check_format_after_translate(self, text: str, translated: str):
         a = FMT_REGEX.findall(text)
@@ -317,24 +305,41 @@ class GameTranslator:
     def print_bad_format(self):
         if not self.bad_formatting:
             return
-        print('Bad formatting strings:')
+        print('=== Bad formatting strings:')
         for text, translated in self.bad_formatting.items():
             print(
                 json.dumps(text, ensure_ascii=False),
                 '>',
                 json.dumps(translated, ensure_ascii=False),
             )
+        print()
+        print()
+
+    def print_overspaces(self):
+        if not self.overspaces:
+            return
+        print('=== Over space strings:')
+        for text, translated in self.overspaces.items():
+            print(
+                json.dumps(text, ensure_ascii=False),
+                '>',
+                json.dumps(translated, ensure_ascii=False),
+            )
+        print()
+        print()
 
     def print_bad_translate(self):
         if not self.bad_translate:
             return
-        print('Bad translate strings:')
+        print('=== Bad translate strings:')
         for text, translated in self.bad_translate.items():
             print(
                 json.dumps(text, ensure_ascii=False),
                 '>',
                 json.dumps(translated, ensure_ascii=False),
             )
+        print()
+        print()
 
 
 if __name__ == '__main__':
@@ -377,4 +382,5 @@ if __name__ == '__main__':
             app.resort_translate_cache()
         app.save_translate_cache()
         app.print_bad_format()
-        app.print_bad_translate()
+        app.print_overspaces()
+        #app.print_bad_translate()

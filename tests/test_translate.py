@@ -14,8 +14,9 @@ def test_valid():
             expected = json.load(f)
         assert got_data == expected
 
-    t = GameTranslator('skip', 60)
+    t = GameTranslator('src_game', 60)
     t.from_path = TEST_DIR
+    t.to_path = TEST_DIR
     t.call_translator = lambda text: text
     t.save_single_file = mock_save_single_file
     t.process_single_file('input.json')

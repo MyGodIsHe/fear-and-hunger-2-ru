@@ -4,6 +4,7 @@ import io
 import json
 import os
 
+from fontTools.ttLib import TTFont
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
 from googleapiclient.http import MediaInMemoryUpload, MediaIoBaseDownload
@@ -60,58 +61,15 @@ def collapse(data: Iterator[dict]) -> Iterator[dict]:
         yield obj
 
 
-def split_text(text: str, line_limit: int, count_lines: int) -> list[str]:
-    lines = text.split('\n')
-    fail = False
-    for line in lines:
-        if len_visible_chars(line) > line_limit:
-            fail = True
-            break
-    if not fail:
-        return lines
-    if lines[0].startswith('\\>\\i'):
-        text = ' '.join(lines[1:])
-        if len_visible_chars(text) <= (count_lines - 1) * line_limit:
-            return split_text_by_world(text, line_limit)
-    text = ' '.join(lines)
-    if len_visible_chars(text) > count_lines * line_limit:
-        return split_text_by_char(text, line_limit)
-    return split_text_by_world(text, line_limit)
-
-
-def split_text_by_world(text: str, limit: int) -> list[str]:
-    lines = []
-    words = []
-    cnt = -1
-    for w in text.split():
-        cnt += 1 + len_visible_chars(w)
-        if cnt > limit:
-            lines.append(' '.join(words))
-            words = []
-            cnt = len(w)
-        words.append(w)
-    if words:
-        lines.append(' '.join(words))
-    return lines
-
-
-def split_text_by_char(text: str, limit: int) -> list[str]:
-    # TODO: не разбивать спец-символы
-    return [
-        text[i:i + limit]
-        for i in range(0, len(text), limit)
-    ]
-
-
 def except_gab_text(f):
-    def wrap(text: str) -> str:
+    def wrap(text: str, *args, **kwargs) -> str:
         if text.startswith('GabText '):
-            return text[:8] + f(text[8:])
+            return text[:8] + f(text[8:], *args, **kwargs)
         if text.startswith('choice_text '):
             i = text.find(' ', 12)
             if i != -1:
                 i += 1
-            return text[:i] + f(text[i:])
+            return text[:i] + f(text[i:], *args, **kwargs)
         return text
 
     return wrap
@@ -133,17 +91,9 @@ def fix_name(text: str) -> str:
     full_name = chr(code) + m.group(2)
     value = text.replace(
         m.group(0),
-        f'\\>\\i[{m.group(1)}]\\}}{full_name}\\{{\\<',
+        f'\\>\\}}{full_name}\\{{\\<',  # \\i[{m.group(1)}] - remove
     )
     return value
-
-
-def len_visible_chars(text: str) -> int:
-    ln = len(text)
-    for m in FMT_REGEX.finditer(text):
-        a, b = m.span(1)
-        ln -= b - a
-    return ln
 
 
 def replace_escapes(f):
@@ -202,6 +152,73 @@ def translate_category(obj: dict):
     obj['note'] = note[:start] + ' ' + value + note[end:]
 
 
+class Font:
+    def __init__(self, font_path: str):
+        font = TTFont(font_path)
+        cmap = font['cmap']
+        self.t = cmap.getcmap(3, 1).cmap
+        self.s = font.getGlyphSet()
+        self.units_per_em = font['head'].unitsPerEm
+
+    def get_width(self, text: str) -> float:
+        total = 0
+        for c in text:
+            if ord(c) in self.t and self.t[ord(c)] in self.s:
+                total += self.s[self.t[ord(c)]].width
+            else:
+                total += self.s['.notdef'].width
+        total = total * 10.0 / self.units_per_em
+        return total
+
+    def split_text(
+            self,
+            text: str,
+            line_limit: int,
+            count_lines: int,
+    ) -> list[str]:
+        lines = text.split('\n')
+        fail = False
+        for line in lines:
+            if self.len_visible_chars(line) > line_limit:
+                fail = True
+                break
+        if not fail:
+            return lines
+        if lines[0].startswith('\\>'):
+            text = ' '.join(lines[1:])
+            if self.len_visible_chars(text) <= (count_lines - 1) * line_limit:
+                return self.split_text_by_world(text, line_limit)
+        text = ' '.join(lines)
+        return self.split_text_by_world(text, line_limit)
+
+    def split_text_by_world(self, text: str, limit: int) -> list[str]:
+        lines = []
+        words = []
+        space_w = self.get_width(' ')
+        cnt = -space_w
+        for w in text.split():
+            len_w = self.len_visible_chars(w)
+            cnt += space_w + len_w
+            if cnt > limit:
+                lines.append(' '.join(words))
+                words = []
+                cnt = len_w
+            words.append(w)
+        if words:
+            lines.append(' '.join(words))
+        return lines
+
+    def len_visible_chars(self, text: str) -> float:
+        clean_text = ''
+        of = 0
+        for m in FMT_REGEX.finditer(text):
+            to, next_of = m.span(1)
+            clean_text += text[of:to]
+            of = next_of
+        clean_text += text[of:len(text)]
+        return self.get_width(clean_text)
+
+
 def get_authenticated_service():
     google_service_account = os.environ.get('GOOGLE_SERVICE_ACCOUNT')
     if google_service_account:
@@ -229,11 +246,6 @@ def get_file(service, file_id: str) -> str:
     while done is False:
         status, done = downloader.next_chunk()
     return file.getvalue().decode('utf-8')
-
-
-def get_revisions(service, file_id: str):
-    request = service.revisions().list(fileId=file_id)
-    print(request.execute())
 
 
 def upload_file(service, file_id: str, body: str):
