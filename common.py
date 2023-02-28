@@ -1,4 +1,5 @@
 import re
+from collections import defaultdict
 from typing import Iterator
 import io
 import json
@@ -16,6 +17,7 @@ REPLACE_REGEX = re.compile(r'\s*\\\s*k\s*\[\s*\d+\s*\]\s*')
 NAME_REGEX = re.compile(r'\\>\\i\[(\d+)\]\\\}([^\\]+)\\\{\\<')
 ASCII_REGEX = re.compile(r'[A-Za-z]')
 MENU_CATEGORY_REGEX = re.compile(r'<Menu Category:([^>]+)>')
+COMMENT_REGEX = re.compile(r'\[[a-z]+\]')
 
 
 def iterate_over_dict(data: dict | list) -> Iterator[dict]:
@@ -232,9 +234,33 @@ def get_authenticated_service():
 
 def get_parts(service):
     for file_id in DOC_IDS:
-        for pair in get_file(service, file_id).split('\r\n\r\n\r\n'):
-            pair = pair.replace('\uFEFF', '')
-            yield pair.strip('\r\n').split('\r\n')
+        blocks = get_file(service, file_id).split('\r\n\r\n\r\n')
+        blocks = [
+            pair.replace('\uFEFF', '').strip('\r\n')
+            for pair in blocks
+        ]
+        comments = blocks[-1]
+        if comments.startswith('[a]'):
+            blocks = blocks[:-1]
+            comments = [
+                COMMENT_REGEX.search(c).group(0)
+                for c in comments.split('\r\n')
+            ]
+            counts = defaultdict(int)
+            for block in blocks:
+                for c in comments:
+                    before = len(block)
+                    block = block.replace(c, '')
+                    after = len(block)
+                    cnt = (before - after) / len(c)
+                    if cnt:
+                        counts[c] += cnt
+            for k, v in counts.items():
+                assert v == 1, (k, v)
+        for pair in blocks:
+            pair = pair.split('\r\n')
+            assert len(pair) == 2, pair
+            yield pair
 
 
 def get_file(service, file_id: str) -> str:
