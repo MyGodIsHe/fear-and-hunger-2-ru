@@ -253,7 +253,7 @@ class GameTranslator:
         parts = self.font.split_text(translated, self.line_limit, count_lines)
         result = '\n'.join(parts)
         if len(parts) > count_lines:
-            self.overspaces[text] = result
+            self.overspaces[text] = count_lines, len(parts), result
         return result
 
     def check_format_after_translate(self, text: str, translated: str):
@@ -318,13 +318,19 @@ class GameTranslator:
     def print_overspaces(self):
         if not self.overspaces:
             return
-        print('=== Over space strings:')
-        for text, translated in self.overspaces.items():
+        print()
+        print('=== Over space strings ===')
+        print()
+        for text, (need_ln, ln, translated) in self.overspaces.items():
             print(
+                f'[{need_ln}]',
                 json.dumps(text, ensure_ascii=False),
-                '>',
+            )
+            print(
+                f'[{ln}]',
                 json.dumps(translated, ensure_ascii=False),
             )
+            print()
         print()
         print()
 
@@ -381,6 +387,6 @@ if __name__ == '__main__':
         if args.resort_cache:
             app.resort_translate_cache()
         app.save_translate_cache()
-        app.print_bad_format()
+        #app.print_bad_format()
         app.print_overspaces()
         #app.print_bad_translate()
