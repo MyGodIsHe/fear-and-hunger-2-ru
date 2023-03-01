@@ -14,7 +14,7 @@ def test_valid():
             expected = json.load(f)
         assert got_data == expected
 
-    t = GameTranslator('src_game', 60)
+    t = GameTranslator('src_game', 'src_game', 60)
     t.from_path = TEST_DIR
     t.to_path = TEST_DIR
     t.call_translator = lambda text: text

@@ -35,16 +35,18 @@ logging.basicConfig(
 
 class GameTranslator:
 
-    def __init__(self, game_dir: str, line_limit: int):
-        self.game_dir = game_dir
-        self.to_path = join(game_dir, 'www/data')
+    def __init__(self, src_game_dir: str, dst_game_dir: str, line_limit: int):
+        self.src_game_dir = src_game_dir
+        self.dst_game_dir = dst_game_dir
+        self.to_path = join(dst_game_dir, 'www/data')
         self.translate_map = {}
         self.translate_map_counter = defaultdict(int)
         self.translator = YandexTranslate()
         self.line_limit = line_limit
         self.bad_formatting = {}
         self.bad_translate = {}
-        self.font = Font(join(game_dir, 'www/fonts/CrimsonText-Regular.ttf'))
+        self.font = Font(
+            join(src_game_dir, 'www/fonts/Garamond-Premier-Pro_19595.ttf'))
         self.overspaces = {}
 
     def run(self):
@@ -271,9 +273,10 @@ class GameTranslator:
         if m:
             self.bad_translate[text] = orig_translated
 
-    def copy_to_game_dir(self, from_path):
-        if from_path != self.game_dir:
-            shutil.copytree(from_path, self.game_dir, dirs_exist_ok=True)
+    def copy_to_game_dir(self):
+        if self.src_game_dir != self.dst_game_dir:
+            shutil.copytree(
+                self.src_game_dir, self.dst_game_dir, dirs_exist_ok=True)
 
     def load_translate_cache(self):
         if os.path.exists(TRANSLATE_CACHE_FILENAME):
@@ -370,10 +373,11 @@ if __name__ == '__main__':
     try:
         logging.info('start')
         app = GameTranslator(
+            'src_game',
             args.game_dir,
             args.line_limit,
         )
-        app.copy_to_game_dir('src_game')
+        app.copy_to_game_dir()
         app.load_translate_cache()
     except KeyboardInterrupt:
         pass
