@@ -369,6 +369,18 @@ if __name__ == '__main__':
         '--resort-cache',
         action='store_true',
     )
+    parser.add_argument(
+        '--print-bad-format',
+        action='store_true',
+    )
+    parser.add_argument(
+        '--print-overspaces',
+        action='store_true',
+    )
+    parser.add_argument(
+        '--print-bad-translate',
+        action='store_true',
+    )
     args = parser.parse_args()
     try:
         logging.info('start')
@@ -391,6 +403,9 @@ if __name__ == '__main__':
         if args.resort_cache:
             app.resort_translate_cache()
         app.save_translate_cache()
-        #app.print_bad_format()
-        app.print_overspaces()
-        #app.print_bad_translate()
+        if args.print_bad_format:
+            app.print_bad_format()
+        if args.print_overspaces:
+            app.print_overspaces()
+        if args.print_bad_translate:
+            app.print_bad_translate()
