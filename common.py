@@ -5,6 +5,8 @@ import io
 import json
 import os
 
+import requests
+from bs4 import BeautifulSoup
 from fontTools.ttLib import TTFont
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
@@ -234,44 +236,35 @@ def get_authenticated_service():
 
 def get_parts(service):
     for file_id in DOC_IDS:
-        blocks = get_file(service, file_id).split('\r\n\r\n\r\n')
-        blocks = [
-            pair.replace('\uFEFF', '').strip('\r\n')
-            for pair in blocks
-        ]
-        comments = blocks[-1]
-        if comments.startswith('[a]'):
-            blocks = blocks[:-1]
-            comments = [
-                COMMENT_REGEX.search(c).group(0)
-                for c in comments.split('\r\n')
-            ]
-            counts = defaultdict(int)
-            for block in blocks:
-                for c in comments:
-                    before = len(block)
-                    block = block.replace(c, '')
-                    after = len(block)
-                    cnt = (before - after) / len(c)
-                    if cnt:
-                        counts[c] += cnt
-            for k, v in counts.items():
-                assert v == 1, (k, v)
-        for pair in blocks:
-            pair = pair.split('\r\n')
+        pairs = get_html_file(service, file_id)
+        for pair in pairs:
             assert len(pair) == 2, pair
             yield pair
 
 
-def get_file(service, file_id: str) -> str:
-    request = service.files().export_media(
-        fileId=file_id, mimeType='text/plain')
-    file = io.BytesIO()
-    downloader = MediaIoBaseDownload(file, request)
-    done = False
-    while done is False:
-        status, done = downloader.next_chunk()
-    return file.getvalue().decode('utf-8')
+def get_html_file(service, file_id: str) -> Iterator[tuple[str, str]]:
+    request = service.files().get(
+        fileId=file_id, fields='exportLinks').execute()
+    download_url = request['exportLinks']['text/html']
+    resp = requests.get(download_url)
+    soup = BeautifulSoup(resp.content, 'html.parser')
+    pair = []
+    for p in soup.find_all('p'):
+        text = ''.join(
+            span.get_text()
+            for span in p.find_all('span')
+        )
+        text = text.replace('\xa0', ' ')
+        if text.endswith('\\'):
+            text = text[:-1]
+        text.strip()
+        if text:
+            pair.append(text)
+        elif pair:
+            yield pair
+            pair = []
+    if pair:
+        yield pair
 
 
 def upload_file(service, file_id: str, body: str):
@@ -281,5 +274,3 @@ def upload_file(service, file_id: str, body: str):
         media_body=m,
         media_mime_type='text/plain',
     ).execute()
-
-

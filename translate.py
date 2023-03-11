@@ -26,13 +26,6 @@ from common import (
 from settings import TRANSLATE_CACHE_FILENAME
 
 
-logging.basicConfig(
-    filename='log.txt',
-    format='%(message)s',
-    level=logging.ERROR,
-)
-
-
 class GameTranslator:
 
     def __init__(self, src_game_dir: str, dst_game_dir: str, line_limit: int):
@@ -303,7 +296,7 @@ class GameTranslator:
         if was_deleted:
             print('bad cache:')
             for k, v in was_deleted.items():
-                print(k, '>', v)
+                print(repr(k), '>', repr(v))
 
     def print_bad_format(self):
         if not self.bad_formatting:
@@ -381,8 +374,18 @@ if __name__ == '__main__':
         '--print-bad-translate',
         action='store_true',
     )
+    parser.add_argument(
+        '--log',
+        action='store_true',
+    )
     args = parser.parse_args()
     try:
+        if args.log:
+            logging.basicConfig(
+                filename='log.txt',
+                format='%(message)s',
+                level=logging.ERROR,
+            )
         logging.info('start')
         app = GameTranslator(
             'src_game',
