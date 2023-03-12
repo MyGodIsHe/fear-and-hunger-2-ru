@@ -249,7 +249,7 @@ def get_html_file(service, file_id: str) -> Iterator[tuple[str, str]]:
     resp = requests.get(download_url)
     soup = BeautifulSoup(resp.content, 'html.parser')
     pair = []
-    for p in soup.find_all('p'):
+    for p in soup.body.find_all('p', recursive=False):
         text = ''.join(
             span.get_text()
             for span in p.find_all('span')
