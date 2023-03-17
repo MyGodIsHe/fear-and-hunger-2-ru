@@ -191,7 +191,7 @@ class Font:
         if lines[0].startswith('\\>'):
             text = ' '.join(lines[1:])
             if self.len_visible_chars(text) <= (count_lines - 1) * line_limit:
-                return self.split_text_by_world(text, line_limit)
+                return [lines[0]] + self.split_text_by_world(text, line_limit)
         text = ' '.join(lines)
         return self.split_text_by_world(text, line_limit)
 
