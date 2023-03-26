@@ -192,6 +192,9 @@ class GameTranslator:
                 obj['parameters'] = [
                     self.split_and_translate_text(obj['parameters'][0], 4)
                 ]
+            case 320:
+                assert len(obj['parameters']) == 2
+                obj['parameters'][1] = self.translate(obj['parameters'][1])
             case 324 | 402:
                 obj['parameters'][1] = self.split_and_translate_text(
                     obj['parameters'][1],
