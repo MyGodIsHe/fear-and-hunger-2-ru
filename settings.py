@@ -6,6 +6,6 @@ SCOPES = ['https://www.googleapis.com/auth/drive']
 API_SERVICE_NAME = 'drive'
 API_VERSION = 'v3'
 DOC_IDS = [
-    '1al4YzWZT2G6QUVbcVUHa_qbT41IoK6i8RKiyt0ItQS8',
+    '1TgadDXyH4gD5FmSU-DpaOiaFdkBfbwy70Ae7rNQ7TU0',
     '1hJd5UT-3dom3jHQaDyBo47TnQpWvPAGSvHcJaPuGBLk',
 ]
