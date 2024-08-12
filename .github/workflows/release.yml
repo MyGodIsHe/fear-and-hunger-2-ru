@@ -33,7 +33,7 @@ jobs:
           ./translate.py --game-dir src_game --line-limit 300
           cd src_game && zip -r ../fear-and-hunger-2-ru.zip .
 
-      - name: Create Release
+      - name: Create Day Release
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -41,8 +41,10 @@ jobs:
           prerelease: false
           files: fear-and-hunger-2-ru.zip
 
-      - name: Update latest tag
-        uses: tvdias/github-tagger@v0.0.1
+      - name: Create Latest Release
+        uses: "marvinpinto/action-automatic-releases@latest"
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          tag: latest
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          automatic_release_tag: latest
+          prerelease: false
+          files: fear-and-hunger-2-ru.zip
